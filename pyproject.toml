@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "re-env0-toolbox"
+name = "re-env0"
 version = "0.1.0"
 description = ""
 authors = ["Igor Malinovskyi <igor.malinovskiy@redis.com>"]
@@ -10,7 +10,7 @@ python = "^3.11"
 typer = "^0.12.3"
 setuptools = "^69.5.1"
 backoff = "^2.2.1"
-env0-client = {path = "deps/env0_client", develop = true}
+env0-client = {path = "deps/env0_client"}
 requests = "^2.31.0"
 
 [tool.poetry.scripts]

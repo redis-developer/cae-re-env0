@@ -46,7 +46,7 @@ def create_env(
             type=1,
             value=json.dumps(value)
             if isinstance(value, dict) or isinstance(value, bool)
-            else value,
+            else str(value),
             schema={"format": "JSON" if isinstance(value, dict) else None},
         )
         for key, value in template_parameters.items()

@@ -105,10 +105,10 @@ def create_bdbs(
         bdb = api.wait_for_bdb(bdb_obj["bdb_id"])
         created_endpoints[bdb_name]["raw_endpoints"] = bdb["endpoints"]
 
-        if endpoint_format == EndpointFormat.host_and_port:
-            scheme = ""  # No scheme for host and port
-        elif endpoint_format == EndpointFormat.redis_uri:
+        if endpoint_format == EndpointFormat.redis_uri:
             scheme = "rediss://" if bdb_obj["tls"] else "redis://"
+        else:
+            scheme = ""  # No scheme for host and port
 
         created_endpoints[bdb_name]["endpoints"] = [
             f"{scheme}{e['dns_name']}:{e['port']}" for e in bdb["endpoints"]

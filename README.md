@@ -2,6 +2,14 @@
 
 CLI tool for creating RE clusters with env0.
 
+## Installation
+
+1. Install Python3 and pip
+
+2. Install the package using pip:
+```bash
+pip install git+https://github.com/redis-developer/cae-re-env0.git
+```
 
 ## Usage
 

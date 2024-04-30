@@ -1,5 +1,6 @@
 import json
 import secrets
+import enum
 
 import backoff
 import typer
@@ -8,6 +9,11 @@ from backoff import on_predicate
 import requests
 
 from ..console import console
+
+
+class EndpointFormat(str, enum.Enum):
+    redis_uri = "redis-uri"
+    host_and_port = "host:port"
 
 
 class RedisEnterpriseClient:
@@ -46,6 +52,7 @@ class RedisEnterpriseClient:
 def create_bdbs(
     env_config_path: str,
     bdb_config_path: str,
+    endpoint_format: EndpointFormat = EndpointFormat.redis_uri,
     endpoints_config_path: str = "endpoints.json",
 ):
 
@@ -92,13 +99,17 @@ def create_bdbs(
                 f"Created BDB: {bdb_config['name']} with ID: {bdb_object['uid']}"
             )
         except requests.exceptions.RequestException as e:
-            print(f"Error making request: {e}")
+            print(f"Error creating BDB {bdb_config['name']}: {e}")
 
     for bdb_name, bdb_obj in created_endpoints.items():
         bdb = api.wait_for_bdb(bdb_obj["bdb_id"])
         created_endpoints[bdb_name]["raw_endpoints"] = bdb["endpoints"]
 
-        scheme = "rediss://" if bdb_obj["tls"] else "redis://"
+        if endpoint_format == EndpointFormat.host_and_port:
+            scheme = ""  # No scheme for host and port
+        elif endpoint_format == EndpointFormat.redis_uri:
+            scheme = "rediss://" if bdb_obj["tls"] else "redis://"
+
         created_endpoints[bdb_name]["endpoints"] = [
             f"{scheme}{e['dns_name']}:{e['port']}" for e in bdb["endpoints"]
         ]

@@ -199,6 +199,7 @@ def create_bdbs(
             )
         except requests.exceptions.RequestException as e:
             print(f"Error creating BDB {bdb_config['name']}: {e}")
+            raise typer.Exit(code=1)
 
     for bdb_name, bdb_obj in created_endpoints.items():
         bdb = api.wait_for_bdb(bdb_obj["bdb_id"])

@@ -98,11 +98,19 @@ def create_env(
         def wait_for_env():
             env = api_instance.environments_find_by_id(api_response.id)
             console.log(f"Environment status: {env.status}")
+
+            if env.status == env0_client.models.EnvironmentApiEnvironmentStatus.FAILED:
+                raise ValueError(env.status)
+
             return (
                 env.status == env0_client.models.EnvironmentApiEnvironmentStatus.ACTIVE
             )
 
-        wait_for_env()
+        try:
+            wait_for_env()
+        except ValueError as e:
+            console.log(f"Environment creation failed: {e}")
+            raise typer.Exit(code=1)
 
         env = api_instance.environments_find_by_id(api_response.id)
 

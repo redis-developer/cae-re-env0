@@ -56,6 +56,12 @@ class RedisEnterpriseClient:
         response.raise_for_status()
         return response.json()
 
+    def get_roles(self):
+        url = f"{self.base_url}/v1/roles"
+        response = requests.get(url, auth=(self.username, self.password), verify=False)
+        response.raise_for_status()
+        return response.json()
+
     def create_user(self, user_config):
         url = f"{self.base_url}/v1/users"
         response = requests.post(
@@ -76,6 +82,7 @@ class RedisEnterpriseClient:
 def create_bdbs(
     env_config_path: str,
     bdb_config_path: str,
+    cluster_index: int = 0,
     endpoint_format: EndpointFormat = EndpointFormat.redis_uri,
     endpoints_config_path: str = "endpoints.json",
 ):
@@ -87,6 +94,15 @@ def create_bdbs(
         print(f"File not found: {env_config_path}")
         raise typer.Exit(code=1)
 
+    if 'clusters' in env_config:
+        try:
+            env_config = env_config['clusters']['value'][cluster_index]
+        except (IndexError, KeyError):
+            print(f"Cluster index {cluster_index} is out of range or env0 output format is incorrect")
+            raise typer.Exit(code=1)
+    else:
+        env_config = {key: output["value"] for key, output in env_config.items()}
+
     try:
         with open(bdb_config_path, "r") as f:
             bdb_configs = json.load(f)
@@ -94,12 +110,12 @@ def create_bdbs(
         print(f"File not found: {bdb_config_path}")
         raise typer.Exit(code=1)
 
-    cluster_name = env_config["cluster_name"]["value"]
+    cluster_name = env_config["cluster_name"]
 
     api = RedisEnterpriseClient(
         f"https://{cluster_name}:9443",
-        env_config["username"]["value"],
-        env_config["password"]["value"],
+        env_config["username"],
+        env_config["password"],
     )
 
     created_endpoints = {}
@@ -119,6 +135,8 @@ def create_bdbs(
                 except requests.exceptions.RequestException as e:
                     print(f"Error creating role {role['name']}: {e}")
                     raise typer.Exit(code=1)
+
+            print("Available roles: ", api.get_roles())
 
         if acls:
             for acl in acls:
@@ -147,7 +165,7 @@ def create_bdbs(
     for bdb_config in bdb_configs:
         console.log(f"Creating BDB: {bdb_config['name']}")
 
-        if "roles_permissions" in bdb_config and bdb_config.get("default_user", False):
+        if "roles_permissions" in bdb_config and bdb_config.get("default_user", True) is False:
             try:
                 role_id = bdb_config["roles_permissions"][0]["role_uid"]
             except KeyError:

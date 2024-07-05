@@ -199,6 +199,8 @@ def create_bdbs(
             )
         except requests.exceptions.RequestException as e:
             print(f"Error creating BDB {bdb_config['name']}: {e}")
+            print(f"Failed BDB config: {bdb_config}")
+            print(f"Response: {e.response.text}")
             raise typer.Exit(code=1)
 
     for bdb_name, bdb_obj in created_endpoints.items():

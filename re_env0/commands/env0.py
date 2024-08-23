@@ -44,9 +44,11 @@ def create_env(
         env0_client.models.EnvironmentApiConfigurationPropertyChange(
             name=key,
             type=1,
-            value=json.dumps(value)
-            if isinstance(value, dict) or isinstance(value, bool)
-            else str(value),
+            value=(
+                json.dumps(value)
+                if isinstance(value, dict) or isinstance(value, bool)
+                else str(value)
+            ),
             schema={"format": "JSON" if isinstance(value, dict) else None},
         )
         for key, value in template_parameters.items()

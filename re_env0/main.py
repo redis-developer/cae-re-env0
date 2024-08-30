@@ -1,7 +1,7 @@
 import typer
 
 from .commands.env0 import create_env, get_env
-from .commands.redis_ent import create_bdbs
+from .commands.redis_ent import create_bdbs, upload_certificate
 from .console import console
 from .env import Env
 
@@ -9,6 +9,7 @@ cli = typer.Typer()
 cli.command()(create_env)
 cli.command()(get_env)
 cli.command()(create_bdbs)
+cli.command()(upload_certificate)
 
 
 def run_cli():

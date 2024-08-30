@@ -1,8 +1,18 @@
 import backoff
+import enum
 from backoff import on_predicate
 import requests
 
 from ...console import console
+
+
+class CertificateType(str, enum.Enum):
+    proxy = "proxy"
+    api = "api"
+    cm = "cm"
+    ldap_client = "ldap_client"
+    metrics_exporter = "metrics_exporter"
+    syncer = "syncer"
 
 
 class RedisEnterpriseClient:
@@ -97,9 +107,39 @@ class RedisEnterpriseClient:
         return response.json()
 
     def create_acl(self, acl_config):
-        url = f"{self.base_url}/redis_acls"
+        url = f"{self.base_url}/v1/redis_acls"
         response = requests.post(
             url, auth=(self.username, self.password), json=acl_config, verify=False
         )
         response.raise_for_status()
         return response.json()
+
+    def get_acls(self):
+        url = f"{self.base_url}/v1/redis_acls"
+        response = requests.get(url, auth=(self.username, self.password), verify=False)
+        response.raise_for_status()
+        return response.json()
+
+    def update_tls_certificate(
+        self,
+        cert_type: CertificateType,
+        cert_data: str,
+        cert_pkey_data: str | None = None,
+    ):
+        url = f"{self.base_url}/v1/cluster/update_cert"
+        payload = {
+            "name": cert_type.value,
+            "certificate": cert_data,
+        }
+
+        if cert_pkey_data:
+            payload["key"] = cert_pkey_data
+
+        response = requests.put(
+            url,
+            auth=(self.username, self.password),
+            json=payload,
+            verify=False,
+        )
+        response.raise_for_status()
+        return response.json() if response.text else None

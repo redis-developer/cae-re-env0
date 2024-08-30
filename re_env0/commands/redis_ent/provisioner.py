@@ -62,6 +62,8 @@ class REProvisioner(object):
                 print(f"Error creating ACL {acl['name']}: {e}")
                 raise typer.Exit(code=1)
 
+        print("Available ACLs: ", self.api.get_acls())
+
     def _create_users(self, users):
         roles_to_users = {}
         for user in users:
@@ -148,6 +150,12 @@ class REProvisioner(object):
 
     def _get_bdb_config_with_auth(self, bdb_config):
         bdb_config = copy.deepcopy(bdb_config)
+
+        if "authentication_ssl_client_certs" in bdb_config:
+            for cert in bdb_config["authentication_ssl_client_certs"]:
+                if cert["client_cert"].endswith(".pem"):
+                    with open(cert["client_cert"], "r") as f:
+                        cert["client_cert"] = f.read()
 
         if (
             "roles_permissions" in bdb_config

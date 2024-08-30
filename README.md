@@ -39,3 +39,20 @@ Once the environment is created, you can create BDBs.
 re-env create-bdbs env_output.json bdbs.json
 ```
 3. The command will save the created endpoints to `endpoints.json`
+
+
+### Uploading TLS certificates
+```bash
+re-env upload-certificate [OPTIONS] ENV_CONFIG_PATH CERTIFICATE_PATH
+```
+
+**Arguments**:
+
+* `ENV_CONFIG_PATH`: [required]
+* `CERTIFICATE_PATH`: [required]
+
+**Options**:
+
+* `--private-key-path TEXT`
+* `--certificate-type [proxy|api|cm|ldap_client|metrics_exporter|syncer]`: [default: proxy]
+* `--cluster-index INTEGER`: [default: 0]

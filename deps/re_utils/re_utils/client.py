@@ -1,9 +1,9 @@
+import logging
+
 import backoff
 import enum
 from backoff import on_predicate
 import requests
-
-from ...console import console
 
 
 class CertificateType(str, enum.Enum):
@@ -16,10 +16,16 @@ class CertificateType(str, enum.Enum):
 
 
 class RedisEnterpriseClient:
-    def __init__(self, base_url, username, password):
+    def __init__(self, base_url, username, password, logger=None):
         self.base_url = base_url
         self.username = username
         self.password = password
+
+        if logger is None:
+            self.logger = logging.Logger(__name__)
+        else:
+            self.logger = logger
+
 
     def create_bdb(self, bdb_config):
         url = f"{self.base_url}/v1/bdbs"
@@ -44,7 +50,7 @@ class RedisEnterpriseClient:
     )
     def wait_for_bdb(self, bdb_id):
         bdb = self.get_bdb(bdb_id)
-        console.log(f"BDB {bdb_id} status: {bdb['status']}")
+        self.logger.log(f"BDB {bdb_id} status: {bdb['status']}")
         return bdb
 
     def create_crdb(self, crdb_config, clusters):
@@ -81,7 +87,7 @@ class RedisEnterpriseClient:
     )
     def wait_for_crdb_task(self, task_id):
         crdb_task = self.get_crdb_task(task_id)
-        console.log(f"CRDB task {task_id} status: {crdb_task['status']}")
+        self.logger.log(f"CRDB task {task_id} status: {crdb_task['status']}")
         return crdb_task
 
     def create_role(self, role_config):

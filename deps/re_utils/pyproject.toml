@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "re-utils"
+version = "0.1.0"
+description = ""
+authors = ["Igor Malinovskiy <igor.malinovskiy@redis.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+backoff = "2.2.1"
+requests = ">=2.26.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

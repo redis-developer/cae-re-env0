@@ -8,10 +8,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 typer = "^0.12.3"
-setuptools = "^69.5.1"
-backoff = "^2.2.1"
 env0-client = {path = "deps/env0_client"}
-requests = "^2.31.0"
+re-utils = {path = "deps/re_utils"}
 
 [tool.poetry.scripts]
 re-env0 = "re_env0.main:run_cli"

@@ -96,7 +96,7 @@ def create_env(
 
         console.log(f"Waiting for environment {api_response.id} to be created")
 
-        @on_predicate(backoff.constant, max_time=600, interval=30, jitter=None)
+        @on_predicate(backoff.constant, max_time=20 * 60, interval=30, jitter=None)
         def wait_for_env():
             env = api_instance.environments_find_by_id(api_response.id)
             console.log(f"Environment status: {env.status}")
@@ -109,7 +109,12 @@ def create_env(
             )
 
         try:
-            wait_for_env()
+            result = wait_for_env()
+
+            if not result:
+                console.log(f"Environment creation timed out")
+                raise typer.Exit(code=1)
+
         except ValueError as e:
             console.log(f"Environment creation failed: {e}")
             raise typer.Exit(code=1)

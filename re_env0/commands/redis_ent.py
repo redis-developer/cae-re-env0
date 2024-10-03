@@ -5,8 +5,8 @@ from requests import HTTPError
 from rich import print
 
 from ..console import console
-from re_fault_injector.deps.re_env0.re_env0.re_utils.client import RedisEnterpriseClient, CertificateType
-from re_fault_injector.deps.re_env0.re_env0.re_utils.provisioner import REProvisioner, EndpointFormat
+from re_utils.client import RedisEnterpriseClient, CertificateType
+from re_utils.provisioner import REProvisioner, EndpointFormat
 
 
 def create_bdbs(
@@ -36,7 +36,9 @@ def create_bdbs(
     manager = REProvisioner(api)
 
     try:
-        created_endpoints = manager.provision(bdb_configs, endpoint_format, clusters_config)
+        created_endpoints = manager.provision(
+            bdb_configs, endpoint_format, clusters_config
+        )
     except RuntimeError as e:
         console.log(f"Failed to create databases: {e}")
         raise typer.Exit(code=1)

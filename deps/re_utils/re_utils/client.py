@@ -149,3 +149,21 @@ class RedisEnterpriseClient:
         )
         response.raise_for_status()
         return response.json() if response.text else None
+
+    def get_request(self, path):
+        url = f"{self.base_url}/{path}"
+        response = requests.get(url, auth=(self.username, self.password), verify=False)
+        response.raise_for_status()
+        return response.json()
+
+    def post_request(self, path, body):
+        url = f"{self.base_url}/{path}"
+        response = requests.post(url, auth=(self.username, self.password), json=body, verify=False)
+        response.raise_for_status()
+        return response.json()
+
+    def put_request(self, path, body):
+        url = f"{self.base_url}/{path}"
+        response = requests.put(url, auth=(self.username, self.password), json=body, verify=False)
+        response.raise_for_status()
+        return response.json()

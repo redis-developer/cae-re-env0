@@ -1,12 +1,19 @@
 import json
+import logging
 
 import typer
 from requests import HTTPError
 from rich import print
+from rich.logging import RichHandler
 
 from ..console import console
 from re_utils.client import RedisEnterpriseClient, CertificateType
 from re_utils.provisioner import REProvisioner, EndpointFormat
+
+
+logging.basicConfig(
+    level="INFO", format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
+)
 
 
 def create_bdbs(
@@ -33,12 +40,10 @@ def create_bdbs(
         env_config["password"],
     )
 
-    manager = REProvisioner(api)
+    manager = REProvisioner(api, logger=logging.getLogger("rich"))
 
     try:
-        created_endpoints = manager.provision(
-            bdb_configs, endpoint_format, clusters_config
-        )
+        created_endpoints = manager.provision(bdb_configs, clusters_config)
     except RuntimeError as e:
         console.log(f"Failed to create databases: {e}")
         raise typer.Exit(code=1)

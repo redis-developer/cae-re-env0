@@ -1,6 +1,7 @@
 import copy
 import secrets
 import enum
+import logging
 
 import requests
 
@@ -27,7 +28,6 @@ class REProvisioner(object):
     def provision(
         self,
         bdb_configs: dict,
-        endpoint_format: EndpointFormat,
         clusters_config: dict = None,
     ):
         if isinstance(bdb_configs, dict):
@@ -68,13 +68,14 @@ class REProvisioner(object):
         roles_to_users = {}
         for user in users:
             try:
-                user["password"] = secrets.token_urlsafe(16)
+                if "auth_method" not in user:
+                    user["password"] = secrets.token_urlsafe(16)
                 self.api.create_user(user)
 
                 for role_id in user["role_uids"]:
                     roles_to_users[role_id] = {
                         "username": user["name"],
-                        "password": user["password"],
+                        "password": user.get("password", None),
                     }
 
             except requests.exceptions.RequestException as e:
@@ -84,7 +85,7 @@ class REProvisioner(object):
 
     def _create_bdbs(self, bdb_configs):
         for bdb_config in bdb_configs:
-            self.logger.log(f"Creating BDB: {bdb_config['name']}")
+            self.logger.info(f"Creating BDB: {bdb_config['name']}")
 
             bdb_config, user_name, password = self._get_bdb_config_with_auth(bdb_config)
 
@@ -98,7 +99,7 @@ class REProvisioner(object):
                     "tls": bdb_object["ssl"],
                 }
 
-                self.logger.log(
+                self.logger.info(
                     f"Created BDB: {bdb_config['name']} with ID: {bdb_object['uid']}"
                 )
             except requests.exceptions.RequestException as e:
@@ -123,7 +124,7 @@ class REProvisioner(object):
             )
 
         for crdb in crdb_configs:
-            self.logger.log(f"Creating CRDB: {crdb['name']}")
+            self.logger.info(f"Creating CRDB: {crdb['name']}")
 
             crdb_config, user_name, password = self._get_bdb_config_with_auth(crdb)
 
@@ -141,7 +142,7 @@ class REProvisioner(object):
                     "tls": crdb_config.get("ssl", False),
                 }
 
-                self.logger.log(
+                self.logger.info(
                     f"Created CRDB: {crdb['name']} with ID: {crdb_object['guid']}"
                 )
             except (requests.exceptions.RequestException, IndexError, KeyError) as e:
@@ -163,7 +164,9 @@ class REProvisioner(object):
             try:
                 role_id = bdb_config["roles_permissions"][0]["role_uid"]
             except KeyError:
-                raise RuntimeError(f"Use 'role_permissions' to specify the role for the user")
+                raise RuntimeError(
+                    f"Use 'role_permissions' to specify the role for the user"
+                )
             try:
                 user_name = self._roles_to_users[role_id]["username"]
                 password = self._roles_to_users[role_id]["password"]

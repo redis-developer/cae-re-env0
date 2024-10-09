@@ -1,12 +1,10 @@
 import copy
 import secrets
 import enum
+import logging
 
-import typer
-from rich import print
 import requests
 
-from ...console import console
 from .client import RedisEnterpriseClient
 
 
@@ -17,15 +15,19 @@ class EndpointFormat(str, enum.Enum):
 
 class REProvisioner(object):
 
-    def __init__(self, api: RedisEnterpriseClient):
+    def __init__(self, api: RedisEnterpriseClient, logger=None):
         self.api = api
         self.created_endpoints = {}
         self._roles_to_users = {}
 
+        if logger is None:
+            self.logger = logging.Logger(__name__)
+        else:
+            self.logger = logger
+
     def provision(
         self,
         bdb_configs: dict,
-        endpoint_format: EndpointFormat,
         clusters_config: dict = None,
     ):
         if isinstance(bdb_configs, dict):
@@ -49,8 +51,7 @@ class REProvisioner(object):
             try:
                 self.api.create_role(role)
             except requests.exceptions.RequestException as e:
-                print(f"Error creating role {role['name']}: {e}")
-                raise typer.Exit(code=1)
+                raise RuntimeError(f"Error creating role {role['name']}: {e}")
 
         print("Available roles: ", self.api.get_roles())
 
@@ -59,8 +60,7 @@ class REProvisioner(object):
             try:
                 self.api.create_acl(acl)
             except requests.exceptions.RequestException as e:
-                print(f"Error creating ACL {acl['name']}: {e}")
-                raise typer.Exit(code=1)
+                raise RuntimeError(f"Error creating ACL {acl['name']}: {e}")
 
         print("Available ACLs: ", self.api.get_acls())
 
@@ -68,24 +68,26 @@ class REProvisioner(object):
         roles_to_users = {}
         for user in users:
             try:
-                user["password"] = secrets.token_urlsafe(16)
+                if "auth_method" not in user:
+                    user["password"] = secrets.token_urlsafe(16)
                 self.api.create_user(user)
 
                 for role_id in user["role_uids"]:
                     roles_to_users[role_id] = {
                         "username": user["name"],
-                        "password": user["password"],
+                        "password": user.get("password", None),
                     }
 
             except requests.exceptions.RequestException as e:
-                print(f"Error creating user {user['name']}: {e}")
-                raise typer.Exit(code=1)
+                raise RuntimeError(
+                    f"Error creating user {user['name']}: {e}\n {e.response.text}"
+                )
 
         return roles_to_users
 
     def _create_bdbs(self, bdb_configs):
         for bdb_config in bdb_configs:
-            console.log(f"Creating BDB: {bdb_config['name']}")
+            self.logger.info(f"Creating BDB: {bdb_config['name']}")
 
             bdb_config, user_name, password = self._get_bdb_config_with_auth(bdb_config)
 
@@ -99,14 +101,15 @@ class REProvisioner(object):
                     "tls": bdb_object["ssl"],
                 }
 
-                console.log(
+                self.logger.info(
                     f"Created BDB: {bdb_config['name']} with ID: {bdb_object['uid']}"
                 )
             except requests.exceptions.RequestException as e:
-                print(f"Error creating BDB {bdb_config['name']}: {e}")
-                print(f"Failed BDB config: {bdb_config}")
-                print(f"Response: {e.response.text}")
-                raise typer.Exit(code=1)
+                raise RuntimeError(
+                    f"Error creating BDB {bdb_config['name']}: {e}\n"
+                    f"Failed BDB config: {bdb_config}\n"
+                    f"Response: {e.response.text}"
+                )
 
     def _create_crdbs(self, crdb_configs, clusters_config):
         clusters = []
@@ -123,7 +126,7 @@ class REProvisioner(object):
             )
 
         for crdb in crdb_configs:
-            console.log(f"Creating CRDB: {crdb['name']}")
+            self.logger.info(f"Creating CRDB: {crdb['name']}")
 
             crdb_config, user_name, password = self._get_bdb_config_with_auth(crdb)
 
@@ -141,12 +144,11 @@ class REProvisioner(object):
                     "tls": crdb_config.get("ssl", False),
                 }
 
-                console.log(
+                self.logger.info(
                     f"Created CRDB: {crdb['name']} with ID: {crdb_object['guid']}"
                 )
             except (requests.exceptions.RequestException, IndexError, KeyError) as e:
-                print(f"Error creating CRDB {crdb['name']}: {e}")
-                raise typer.Exit(code=1)
+                raise RuntimeError(f"Error creating CRDB {crdb['name']}: {e}")
 
     def _get_bdb_config_with_auth(self, bdb_config):
         bdb_config = copy.deepcopy(bdb_config)
@@ -164,16 +166,16 @@ class REProvisioner(object):
             try:
                 role_id = bdb_config["roles_permissions"][0]["role_uid"]
             except KeyError:
-                print(f"Use 'role_permissions' to specify the role for the user")
-                raise typer.Exit(code=1)
+                raise RuntimeError(
+                    f"Use 'role_permissions' to specify the role for the user"
+                )
             try:
                 user_name = self._roles_to_users[role_id]["username"]
                 password = self._roles_to_users[role_id]["password"]
             except KeyError:
-                print(
+                raise RuntimeError(
                     f"Role {role_id} is not defined in the roles section of the config file"
                 )
-                raise typer.Exit(code=1)
         else:
             user_name = "default"
             password = secrets.token_urlsafe(16)

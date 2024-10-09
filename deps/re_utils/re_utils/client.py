@@ -1,9 +1,9 @@
+import logging
+
 import backoff
 import enum
 from backoff import on_predicate
 import requests
-
-from ...console import console
 
 
 class CertificateType(str, enum.Enum):
@@ -16,10 +16,15 @@ class CertificateType(str, enum.Enum):
 
 
 class RedisEnterpriseClient:
-    def __init__(self, base_url, username, password):
+    def __init__(self, base_url, username, password, logger=None):
         self.base_url = base_url
         self.username = username
         self.password = password
+
+        if logger is None:
+            self.logger = logging.Logger(__name__)
+        else:
+            self.logger = logger
 
     def create_bdb(self, bdb_config):
         url = f"{self.base_url}/v1/bdbs"
@@ -44,7 +49,7 @@ class RedisEnterpriseClient:
     )
     def wait_for_bdb(self, bdb_id):
         bdb = self.get_bdb(bdb_id)
-        console.log(f"BDB {bdb_id} status: {bdb['status']}")
+        self.logger.info(f"BDB {bdb_id} status: {bdb['status']}")
         return bdb
 
     def create_crdb(self, crdb_config, clusters):
@@ -81,7 +86,7 @@ class RedisEnterpriseClient:
     )
     def wait_for_crdb_task(self, task_id):
         crdb_task = self.get_crdb_task(task_id)
-        console.log(f"CRDB task {task_id} status: {crdb_task['status']}")
+        self.logger.info(f"CRDB task {task_id} status: {crdb_task['status']}")
         return crdb_task
 
     def create_role(self, role_config):
@@ -143,3 +148,21 @@ class RedisEnterpriseClient:
         )
         response.raise_for_status()
         return response.json() if response.text else None
+
+    def get_request(self, path):
+        url = f"{self.base_url}/{path}"
+        response = requests.get(url, auth=(self.username, self.password), verify=False)
+        response.raise_for_status()
+        return response.json()
+
+    def post_request(self, path, body):
+        url = f"{self.base_url}/{path}"
+        response = requests.post(url, auth=(self.username, self.password), json=body, verify=False)
+        response.raise_for_status()
+        return response.json()
+
+    def put_request(self, path, body):
+        url = f"{self.base_url}/{path}"
+        response = requests.put(url, auth=(self.username, self.password), json=body, verify=False)
+        response.raise_for_status()
+        return response.json()

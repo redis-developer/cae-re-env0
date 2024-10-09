@@ -79,7 +79,9 @@ class REProvisioner(object):
                     }
 
             except requests.exceptions.RequestException as e:
-                raise RuntimeError(f"Error creating user {user['name']}: {e}")
+                raise RuntimeError(
+                    f"Error creating user {user['name']}: {e}\n {e.response.text}"
+                )
 
         return roles_to_users
 

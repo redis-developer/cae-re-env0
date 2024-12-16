@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "re-env0"
-version = "0.1.5"
+version = "0.1.6"
 description = ""
 authors = ["Igor Malinovskyi <igor.malinovskiy@redis.com>"]
 readme = "README.md"

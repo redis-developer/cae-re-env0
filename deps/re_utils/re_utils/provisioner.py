@@ -1,4 +1,5 @@
 import copy
+import os.path
 import secrets
 import enum
 import logging
@@ -155,7 +156,7 @@ class REProvisioner(object):
 
         if "authentication_ssl_client_certs" in bdb_config:
             for cert in bdb_config["authentication_ssl_client_certs"]:
-                if cert["client_cert"].endswith(".pem"):
+                if os.path.isfile(cert["client_cert"]):
                     with open(cert["client_cert"], "r") as f:
                         cert["client_cert"] = f.read()
 

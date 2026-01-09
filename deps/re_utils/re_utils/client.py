@@ -131,7 +131,7 @@ class RedisEnterpriseClient:
         cert_data: str,
         cert_pkey_data: str | None = None,
     ):
-        url = f"{self.base_url}/v1/cluster/update_cert"
+        url = f"{self.base_url}/v1/cluster/certificates"
         payload = {
             "name": cert_type.value,
             "certificate": cert_data,
@@ -143,7 +143,7 @@ class RedisEnterpriseClient:
         response = requests.put(
             url,
             auth=(self.username, self.password),
-            json=payload,
+            json={"certificates": [payload]},
             verify=False,
         )
         response.raise_for_status()

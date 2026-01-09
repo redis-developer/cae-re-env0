@@ -90,7 +90,7 @@ class REProvisioner(object):
         for bdb_config in bdb_configs:
             self.logger.info(f"Creating BDB: {bdb_config['name']}")
 
-            bdb_config, user_name, password = self._get_bdb_config_with_auth(bdb_config)
+            bdb_config, user_name, password, tls_cert_path = self._get_bdb_config_with_auth(bdb_config)
 
             try:
                 bdb_object = self.api.create_bdb(bdb_config)
@@ -101,6 +101,9 @@ class REProvisioner(object):
                     "password": password,
                     "tls": bdb_object["ssl"],
                 }
+
+                if tls_cert_path:
+                    self.created_endpoints[bdb_config["name"]]["tls_cert_path"] = tls_cert_path
 
                 self.logger.info(
                     f"Created BDB: {bdb_config['name']} with ID: {bdb_object['uid']}"
@@ -129,7 +132,7 @@ class REProvisioner(object):
         for crdb in crdb_configs:
             self.logger.info(f"Creating CRDB: {crdb['name']}")
 
-            crdb_config, user_name, password = self._get_bdb_config_with_auth(crdb)
+            crdb_config, user_name, password, tls_cert_path = self._get_bdb_config_with_auth(crdb)
 
             try:
                 crdb_task = self.api.create_crdb(crdb_config, clusters)
@@ -145,6 +148,9 @@ class REProvisioner(object):
                     "tls": crdb_config.get("ssl", False),
                 }
 
+                if tls_cert_path:
+                    self.created_endpoints[crdb_config["name"]]["tls_cert_path"] = tls_cert_path
+
                 self.logger.info(
                     f"Created CRDB: {crdb['name']} with ID: {crdb_object['guid']}"
                 )
@@ -154,9 +160,14 @@ class REProvisioner(object):
     def _get_bdb_config_with_auth(self, bdb_config):
         bdb_config = copy.deepcopy(bdb_config)
 
+        tls_cert_path = None
+
         if "authentication_ssl_client_certs" in bdb_config:
             for cert in bdb_config["authentication_ssl_client_certs"]:
                 if os.path.isfile(cert["client_cert"]):
+                    if tls_cert_path is None:
+                        tls_cert_path = os.path.dirname(os.path.abspath(cert["client_cert"]))
+
                     with open(cert["client_cert"], "r") as f:
                         cert["client_cert"] = f.read()
 
@@ -182,4 +193,4 @@ class REProvisioner(object):
             password = secrets.token_urlsafe(16)
             bdb_config["authentication_redis_pass"] = password
 
-        return bdb_config, user_name, password
+        return bdb_config, user_name, password, tls_cert_path

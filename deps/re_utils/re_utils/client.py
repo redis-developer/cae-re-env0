@@ -165,4 +165,6 @@ class RedisEnterpriseClient:
         url = f"{self.base_url}/{path}"
         response = requests.put(url, auth=(self.username, self.password), json=body, verify=False)
         response.raise_for_status()
+        if response.status_code == 204 or not response.text:
+            return {}
         return response.json()

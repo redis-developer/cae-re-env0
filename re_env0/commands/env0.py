@@ -110,7 +110,19 @@ def create_env(
             console.log(f"Environment status: {env.status}")
 
             if env.status == env0_client.models.EnvironmentApiEnvironmentStatus.FAILED:
-                raise ValueError(env.status)
+                deployment_log = env.latest_deployment_log
+                error_details = {
+                    "status": str(env.status),
+                    "environment_id": env.id,
+                    "environment_name": env.name,
+                }
+                if deployment_log:
+                    error_details["deployment_log_id"] = deployment_log.id
+                    error_details["deployment_status"] = str(deployment_log.status)
+                    error_details["deployment_error"] = deployment_log.error
+                    error_details["blueprint_name"] = deployment_log.blueprint_name
+                    error_details["blueprint_id"] = deployment_log.blueprint_id
+                raise ValueError(error_details)
 
             return (
                 env.status == env0_client.models.EnvironmentApiEnvironmentStatus.ACTIVE
@@ -124,7 +136,13 @@ def create_env(
                 raise typer.Exit(code=1)
 
         except ValueError as e:
-            console.log(f"Environment creation failed: {e}")
+            console.log(f"Environment creation failed with details:")
+            error_info = e.args[0] if e.args else "No details available"
+            if isinstance(error_info, dict):
+                for key, value in error_info.items():
+                    console.log(f"  {key}: {value}")
+            else:
+                console.log(f"  {error_info}")
             raise typer.Exit(code=1)
 
         env = api_instance.environments_find_by_id(api_response.id)

@@ -159,10 +159,14 @@ class RedisEnterpriseClient:
         url = f"{self.base_url}/{path}"
         response = requests.post(url, auth=(self.username, self.password), json=body, verify=False)
         response.raise_for_status()
-        return response.json()
+        # Some RS REST endpoints (e.g. PUT/POST /v1/nodes/{id}) return an empty body
+        # on success; response.json() would raise on empty content.
+        return response.json() if response.text else None
 
     def put_request(self, path, body):
         url = f"{self.base_url}/{path}"
         response = requests.put(url, auth=(self.username, self.password), json=body, verify=False)
         response.raise_for_status()
-        return response.json()
+        # RS 8.8's PUT /v1/nodes/{id} (and similar) returns an empty body on success;
+        # guard so response.json() does not raise "Expecting value: line 1 column 1".
+        return response.json() if response.text else None

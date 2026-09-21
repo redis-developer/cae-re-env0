@@ -58,7 +58,11 @@ def create_bdbs(
     for bdb_name, bdb_obj in created_endpoints.items():
         bdb = api.wait_for_bdb(bdb_obj["bdb_id"])
         created_endpoints[bdb_name]["raw_endpoints"] = bdb["endpoints"]
-        created_endpoints[bdb_name]["discovery_endpoints"] = list(discovery_endpoints)
+
+        # Leave the key out entirely when nothing was discovered, so that a missing field keeps
+        # meaning "discovery service not advertised" rather than "configured with zero servers".
+        if discovery_endpoints:
+            created_endpoints[bdb_name]["discovery_endpoints"] = list(discovery_endpoints)
 
         if endpoint_format == EndpointFormat.redis_uri:
             scheme = "rediss://" if bdb_obj["tls"] else "redis://"

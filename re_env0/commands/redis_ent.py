@@ -15,6 +15,10 @@ logging.basicConfig(
     level="INFO", format="%(message)s", datefmt="[%X]", handlers=[RichHandler()]
 )
 
+# Port of the Redis Enterprise discovery service (Sentinel-compatible API). Hard-coded and
+# non-configurable in Redis Enterprise.
+DISCOVERY_SERVICE_PORT = 8001
+
 
 def create_bdbs(
     env_config_path: str,
@@ -49,10 +53,12 @@ def create_bdbs(
         raise typer.Exit(code=1)
 
     api_cache = {}
+    discovery_endpoints = get_discovery_endpoints(api)
 
     for bdb_name, bdb_obj in created_endpoints.items():
         bdb = api.wait_for_bdb(bdb_obj["bdb_id"])
         created_endpoints[bdb_name]["raw_endpoints"] = bdb["endpoints"]
+        created_endpoints[bdb_name]["discovery_endpoints"] = list(discovery_endpoints)
 
         if endpoint_format == EndpointFormat.redis_uri:
             scheme = "rediss://" if bdb_obj["tls"] else "redis://"
@@ -134,6 +140,42 @@ def upload_certificate(
         raise typer.Exit(code=1)
 
     console.log(f"Certificate was updated")
+
+
+def get_discovery_endpoints(api: RedisEnterpriseClient) -> list[str]:
+    """Address of the discovery service (Sentinel-compatible API) on every cluster node.
+
+    Clients that discover a database through the discovery service need one address per node:
+    the service runs on all of them, answers for every database in the cluster, and keeps
+    answering after a database endpoint moves to another node.
+
+    The external address is preferred and the internal one is used as a fallback, matching what
+    the discovery service itself reports for the plain database name. For an Active-Active
+    database these are the nodes of the local cluster only.
+
+    Returns an empty list when the nodes cannot be read, so that a discovery-service outage or a
+    permission problem does not fail provisioning; consumers treat the missing field as
+    "discovery service not advertised".
+    """
+    try:
+        nodes = api.get_request("v1/nodes")
+    except (HTTPError, OSError) as e:
+        console.log(f"Failed to read cluster nodes, not advertising discovery endpoints: {e}")
+        return []
+
+    endpoints = []
+
+    for node in sorted(nodes, key=lambda n: int(n["uid"])):
+        external_addr = node.get("external_addr") or []
+        addr = external_addr[0] if external_addr else node.get("addr")
+
+        if not addr:
+            console.log(f"Node {node['uid']} has no usable address, skipping it")
+            continue
+
+        endpoints.append(f"{addr}:{DISCOVERY_SERVICE_PORT}")
+
+    return endpoints
 
 
 def parse_env_config(env_config_path: str, cluster_index: int = 0):

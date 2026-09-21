@@ -40,6 +40,22 @@ re-env create-bdbs env_output.json bdbs.json
 ```
 3. The command will save the created endpoints to `endpoints.json`
 
+Each database entry also carries a `discovery_endpoints` list with the address of the Redis
+Enterprise discovery service (Sentinel-compatible API) on every cluster node:
+
+```json
+"discovery_endpoints": [
+    "34.244.146.73:8001",
+    "18.201.54.148:8001",
+    "54.78.167.171:8001"
+]
+```
+
+Clients that discover a database through that service need one address per node: the service runs
+on all of them and keeps answering after a database endpoint moves to another node. The external
+node address is used when there is one, the internal address otherwise. The field is omitted when
+the cluster nodes cannot be read.
+
 
 ### Uploading TLS certificates
 ```bash
